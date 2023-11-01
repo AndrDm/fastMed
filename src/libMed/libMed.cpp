@@ -218,8 +218,7 @@ LIBMED_API int QuickSelectDBL(double* src, unsigned int n, double* med) {
 				if (ir == l + 1 && arr[ir] < arr[l]) SWAP(arr[l], arr[ir]);
 				med2 = arr[k];
 				break;
-			}
-			else {
+			} else {
 				unsigned long mid = (l + ir) >> 1;
 				SWAP(arr[mid], arr[l + 1]);
 				if (arr[l] > arr[ir]) SWAP(arr[l], arr[ir]);
@@ -241,8 +240,7 @@ LIBMED_API int QuickSelectDBL(double* src, unsigned int n, double* med) {
 			}
 		}
 		*med = (med1 + med2) / 2.0;
-	}
-	else {
+	} else {
 		*med = med1;
 	}
 	free(arr);
@@ -283,8 +281,7 @@ LIBMED_API int MedianU32(unsigned int* ptr, size_t Length, double* med)
 		medianLeft = (medianValMSW << 16) | max;
 		medianRight = (nextVal << 16) | min;
 		*med = ((double)medianLeft + (double)medianRight) / 2.0;
-	}
-	else { //LSW HISTO
+	} else { //LSW HISTO
 		ZeroMemory(histo, (USHRT_MAX + 1) * sizeof(size_t));
 		med_ = medianValMSW << 16;
 		for (count = 0, i = 0; i < Length; i++) {
@@ -307,8 +304,7 @@ LIBMED_API int MedianU32(unsigned int* ptr, size_t Length, double* med)
 			medianLeft = (medianValMSW << 16) | medianValLSW;
 			medianRight = (medianValMSW << 16) | nextVal;
 			*med = ((double)medianLeft + (double)medianRight) / 2.0;
-		}
-		else {
+		} else {
 			medianValI32 = (medianValMSW << 16) | medianValLSW;
 			*med = (double)medianValI32;
 		}
@@ -336,8 +332,7 @@ LIBMED_API int MedianU16(unsigned short* ptr, size_t Length, double* med)
 		size_t nextVal = medianVal;
 		while (!histogram[++nextVal]);
 		*med = (medianVal + nextVal) / 2.0; // Middle
-	}
-	else *med = (double)medianVal;
+	} else *med = (double)medianVal;
 
 	free(histogram);
 	return 0;
