@@ -21,6 +21,8 @@ LIBMED_API int  __cdecl MedianDBL(double* ptr, size_t Length, double* med);
 LIBMED_API int  __cdecl MedianU32(unsigned int* ptr, size_t Length, double* med);
 LIBMED_API int  __cdecl MedianU16(unsigned short* ptr, size_t Length, double* med);
 
+LIBMED_API int fnMedianOfNinthers(double* arr, int n, double* med);
+
 /* Error Codes */
 typedef enum {
     NoErr = 0,	// No Error.

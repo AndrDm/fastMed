@@ -9,15 +9,16 @@
 #define x00F0 0x00000000FFFF0000
 #define x000F 0x000000000000FFFF
 
-#define NANh  0x7FFF000000000000
-#define NANl  0x0000FFFFFFFFFFFF
-
-
 //0 - LSW; 3 - MSW
 #define	W3 (ptr_U64[i] & 0xFFFF000000000000)
 #define	W2 (ptr_U64[i] & 0x0000FFFF00000000)
 #define	W1 (ptr_U64[i] & 0x00000000FFFF0000)
 #define	W0 (ptr_U64[i] & 0x000000000000FFFF)
+#define	W32 (ptr_U64[i] & 0xFFFFFFFF00000000)
+#define	W321 (ptr_U64[i] & 0xFFFFFFFFFFFF0000)
+
+#define NaN 0x7FF0000000000000
+
 
 #define ENCODE(var) if (!((var) & x8000)) (var) ^= x8000; else (var) ^= xFFFF
 #define DECODE(var) if (((var) & x8000)) (var) ^= x8000; else (var) ^= xFFFF
@@ -29,19 +30,13 @@ LIBMED_API int MedianDBL(double* ptr, size_t Length, double* med)
 	if (!histo) return -2;
 	uint64_t count, i, medianPos;
 	uint64_t min0, min1, min2, max0, max1, max2;
-	uint64_t medValW0 = 0, medValW1 = 0, medValW2 = 0, medValW3 = 0;
+	uint64_t medValW0 = 0, medValW1 = 0, medValW2 = 0, medValW3 = 0; 
 	uint64_t medianLeft, medianRight, medVal, nextVal, med_;
 
 
 	uint64_t* ptr_U64 = (uint64_t*)ptr; //Cast
 
 	for (i = 0; i < Length; i++) {
-		if (((ptr_U64[i] & NANh) == NANh) && ((ptr_U64[i] & NANl) != 0)) { 
-			*med = ptr[i];
-			for (int j = 0; j < i; j++) DECODE(ptr_U64[j]); //revert back
-			free(histo); 
-			return 0; 
-		}
 		ENCODE(ptr_U64[i]);
 		histo[W3 >> 48]++;
 	}
@@ -49,7 +44,7 @@ LIBMED_API int MedianDBL(double* ptr, size_t Length, double* med)
 	medianPos = (Length + 1) / 2;
 	for (count = 0, i = 0; i <= USHRT_MAX; i++) { // Iterate over histogram
 		count += histo[i];
-		if (count >= medianPos) { medValW3 = i; break; } // >> single Median at MSW
+		if (count >= medianPos) { medValW3 = i; if (count > medianPos) count-= histo[i]; break; } // >> single Median at MSW
 	}
 
 	if (!(Length & 1) && count == medianPos) { //W3
@@ -81,9 +76,10 @@ LIBMED_API int MedianDBL(double* ptr, size_t Length, double* med)
 	} else {
 		memset(histo, 0, (USHRT_MAX + 1) * sizeof(size_t));
 		med_ = (medValW3 <<= 48);
-		for (count = 0, i = 0; i < Length; i++) { //2.2 pass
+		//count = 0;
+		for (i = 0; i < Length; i++) { //2.2 pass
 			if (medValW3 == W3) histo[W2 >> 32]++;
-			if (ptr_U64[i] < med_) count++;
+			//if (ptr_U64[i] < med_) count++;
 		} // 2.2
 
 		for (int i = 0; i <= USHRT_MAX; i++) {
@@ -117,7 +113,8 @@ LIBMED_API int MedianDBL(double* ptr, size_t Length, double* med)
 			memset(histo, 0, (USHRT_MAX + 1) * sizeof(size_t));
 			med_ = medValW3 | (medValW2 <<= 32);
 			for (count = 0, i = 0; i < Length; i++) { //3.3 pass
-				if (medValW3 == W3 && medValW2 == W2) histo[W1 >> 16]++;
+				//if (medValW3 == W3 && medValW2 == W2) histo[W1 >> 16]++;
+				if (med_ == W32) histo[W1 >> 16]++;
 				if (ptr_U64[i] < med_) count++;
 			} //3.3
 
@@ -147,7 +144,8 @@ LIBMED_API int MedianDBL(double* ptr, size_t Length, double* med)
 				memset(histo, 0, (USHRT_MAX + 1) * sizeof(size_t));
 				med_ = medValW3 | medValW2 | (medValW1 <<= 16);
 				for (count = 0, i = 0; i < Length; i++) {//!! Spaziergang !!
-					if (medValW3 == W3 && medValW2 == W2 && medValW1 == W1) histo[W0]++;
+					//if (medValW3 == W3 && medValW2 == W2 && medValW1 == W1) histo[W0]++;
+					if (med_ == W321) histo[W0]++;
 					if (ptr_U64[i] < med_) count++;
 					DECODE(ptr_U64[i]); //restore back
 				} //4.4, final
@@ -314,7 +312,8 @@ LIBMED_API int MedianU32(unsigned int* ptr, size_t Length, double* med)
 			medianLeft = (medianValMSW << 16) | medianValLSW;
 			medianRight = (medianValMSW << 16) | nextVal;
 			*med = ((double)medianLeft + (double)medianRight) / 2.0;
-		} else {
+		}
+		else {
 			medianValI32 = (medianValMSW << 16) | medianValLSW;
 			*med = (double)medianValI32;
 		}
@@ -342,7 +341,8 @@ LIBMED_API int MedianU16(unsigned short* ptr, size_t Length, double* med)
 		size_t nextVal = medianVal;
 		while (!histogram[++nextVal]);
 		*med = (medianVal + nextVal) / 2.0; // Middle
-	} else *med = (double)medianVal;
+	}
+	else *med = (double)medianVal;
 
 	free(histogram);
 	return 0;
