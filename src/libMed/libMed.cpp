@@ -9,6 +9,10 @@
 #define x00F0 0x00000000FFFF0000
 #define x000F 0x000000000000FFFF
 
+#define NANh  0x7FFF000000000000
+#define NANl  0x0000FFFFFFFFFFFF
+
+
 //0 - LSW; 3 - MSW
 #define	W3 (ptr_U64[i] & 0xFFFF000000000000)
 #define	W2 (ptr_U64[i] & 0x0000FFFF00000000)
@@ -25,13 +29,19 @@ LIBMED_API int MedianDBL(double* ptr, size_t Length, double* med)
 	if (!histo) return -2;
 	uint64_t count, i, medianPos;
 	uint64_t min0, min1, min2, max0, max1, max2;
-	uint64_t medValW0 = 0, medValW1 = 0, medValW2 = 0, medValW3 = 0; 
+	uint64_t medValW0 = 0, medValW1 = 0, medValW2 = 0, medValW3 = 0;
 	uint64_t medianLeft, medianRight, medVal, nextVal, med_;
 
 
 	uint64_t* ptr_U64 = (uint64_t*)ptr; //Cast
 
 	for (i = 0; i < Length; i++) {
+		if (((ptr_U64[i] & NANh) == NANh) && ((ptr_U64[i] & NANl) != 0)) { 
+			*med = ptr[i];
+			for (int j = 0; j < i; j++) DECODE(ptr_U64[j]); //revert back
+			free(histo); 
+			return 0; 
+		}
 		ENCODE(ptr_U64[i]);
 		histo[W3 >> 48]++;
 	}
