@@ -17,8 +17,8 @@
 #define	W32 (ptr_U64[i] & 0xFFFFFFFF00000000)
 #define	W321 (ptr_U64[i] & 0xFFFFFFFFFFFF0000)
 
-#define NaN 0x7FF0000000000000
-
+#define NANh  0x7FFF000000000000
+#define NANl  0x0000FFFFFFFFFFFF
 
 #define ENCODE(var) if (!((var) & x8000)) (var) ^= x8000; else (var) ^= xFFFF
 #define DECODE(var) if (((var) & x8000)) (var) ^= x8000; else (var) ^= xFFFF
@@ -37,9 +37,16 @@ LIBMED_API int MedianDBL(double* ptr, size_t Length, double* med)
 	uint64_t* ptr_U64 = (uint64_t*)ptr; //Cast
 
 	for (i = 0; i < Length; i++) {
+		if (((ptr_U64[i] & NANh) == NANh) && ((ptr_U64[i] & NANl) != 0)) {
+			*med = ptr[i];
+			for (int j = 0; j < i; j++) DECODE(ptr_U64[j]); //revert back
+			free(histo);
+			return 0;
+		}
 		ENCODE(ptr_U64[i]);
 		histo[W3 >> 48]++;
 	}
+
 	// Find the initial median position;
 	medianPos = (Length + 1) / 2;
 	for (count = 0, i = 0; i <= USHRT_MAX; i++) { // Iterate over histogram
